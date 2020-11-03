@@ -1,0 +1,77 @@
+1.
+mysql> SELECT p.gender, count(p.gender) as total_likes FROM users AS u JOIN profiles as p on u.id = p.user_id JOIN likes as l ON u.id =
+l.user_id GROUP BY p.gender ORDER BY total_likes DESC;
++--------+-------------+
+| gender | total_likes |
++--------+-------------+
+| m      |          59 |
+| f      |          41 |
++--------+-------------+
+2 rows in set (0.00 sec)
+
+2. Сначала сформировал таблицу, где видно, сколько лайков имеет каждый из 10 самых младших пользователей:
+mysql> SELECT u.id, p.birthday, COUNT(l.target_id) AS likes 
+ FROM users AS u 
+   JOIN profiles AS p ON u.id = p.user_id 
+   LEFT JOIN likes AS l ON u.id = l.target_id 
+ WHERE l.target_type_id = 2 OR l.target_type_id IS NULL 
+ GROUP BY u.id 
+ ORDER BY p.birthday DESC 
+ LIMIT 10;
++----+------------+-------+
+| id | birthday   | likes |
++----+------------+-------+
+| 26 | 2020-06-29 |     0 |
+| 10 | 2019-09-28 |     0 |
+| 55 | 2016-03-30 |     0 |
+| 95 | 2015-11-28 |     1 |
+| 96 | 2014-02-10 |     1 |
+| 84 | 2012-10-03 |     1 |
+| 49 | 2009-11-28 |     0 |
+| 78 | 2009-08-08 |     1 |
+| 38 | 2009-02-12 |     0 |
+| 69 | 2007-04-18 |     2 |
++----+------------+-------+
+10 rows in set (0.00 sec)
+Далее использую вложенный запрос для подсчета суммы лайков, не знаю, как можно это сделать без вложенного запроса:(
+
+SELECT SUM(likes) FROM 
+(SELECT COUNT(l.target_id) AS likes 
+FROM users AS u 
+JOIN profiles AS p ON u.id = p.user_id 
+LEFT JOIN likes AS l ON u.id = l.target_id 
+WHERE l.target_type_id = 2 OR l.target_type_id IS NULL 
+GROUP BY u.id ORDER BY p.birthday DESC LIMIT 10) AS likes;
++------------+
+| SUM(likes) |
++------------+
+|          6 |
++------------+
+1 row in set (0.00 sec)
+
+3.
+mysql> SELECT u.id, COUNT(l.user_id) + COUNT(posts.user_id) + COUNT(m.user_id) AS activity 
+ FROM users AS u 
+   JOIN profiles AS p ON u.id = p.user_id 
+   LEFT JOIN likes AS l ON u.id = l.user_id 
+   LEFT JOIN posts  ON u.id = posts.user_id 
+   LEFT JOIN media AS m ON u.id = m.user_id 
+ GROUP BY u.id 
+ ORDER BY activity 
+ LIMIT 10;
++----+----------+
+| id | activity |
++----+----------+
+| 48 |        0 |
+| 87 |        0 |
+|  3 |        0 |
+| 59 |        0 |
+| 35 |        0 |
+| 14 |        0 |
+| 74 |        0 |
+| 22 |        1 |
+|  7 |        1 |
+| 28 |        1 |
++----+----------+
+10 rows in set (0.00 sec)
+
