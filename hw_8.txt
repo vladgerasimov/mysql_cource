@@ -1,6 +1,10 @@
 1.
-mysql> SELECT p.gender, count(p.gender) as total_likes FROM users AS u JOIN profiles as p on u.id = p.user_id JOIN likes as l ON u.id =
-l.user_id GROUP BY p.gender ORDER BY total_likes DESC;
+mysql> SELECT p.gender, count(p.gender) as total_likes 
+FROM users AS u 
+JOIN profiles as p on u.id = p.user_id 
+JOIN likes as l ON u.id = l.user_id 
+GROUP BY p.gender 
+ORDER BY total_likes DESC;
 +--------+-------------+
 | gender | total_likes |
 +--------+-------------+
