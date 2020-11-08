@@ -1,0 +1,166 @@
+Тема 6
+1.
+mysql> START TRANSACTION;
+
+mysql> INSERT INTO users SELECT * FROM shop.users WHERE id = 1;
+Query OK, 1 row affected (0.00 sec)
+Records: 1  Duplicates: 0  Warnings: 0
+
+mysql> DELETE FROM shop.users WHERE id = 1;
+Query OK, 1 row affected (0.00 sec)
+
+mysql> COMMIT;
+Query OK, 0 rows affected (0.01 sec)
+
+2.
+mysql> CREATE VIEW product_catalog AS SELECT p.name, c.name FROM products AS p JOIN catalogs AS c ON p.catalog_id = c.id;
+ERROR 1060 (42S21): Duplicate column name 'name'
+mysql> CREATE VIEW product_catalog AS SELECT p.name AS product, c.name AS catalog FROM products AS p JOIN catalogs AS c ON p.catalog_id
+= c.id;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> SELECT * FROM product_catalog;
++-------------------------+-----------------------------------+
+| product                 | catalog                           |
++-------------------------+-----------------------------------+
+| Intel Core i3-8100      | Процессоры                        |
+| Intel Core i5-7400      | Процессоры                        |
+| AMD FX-8320E            | Процессоры                        |
+| AMD FX-8320             | Процессоры                        |
+| ASUS ROG MAXIMUS X HERO | Материнские платы                 |
+| Gigabyte H310M S2H      | Материнские платы                 |
+| MSI B250M GAMING PRO    | Материнские платы                 |
++-------------------------+-----------------------------------+
+7 rows in set (0.00 sec)
+
+4.
+mysql> PREPARE delete_old FROM 'DELETE FROM dates ORDER BY date LIMIT ?';
+Query OK, 0 rows affected (0.00 sec)
+Statement prepared
+
+mysql> SET @num = (SELECT COUNT(*)-5 FROM dates);
+Query OK, 0 rows affected (0.00 sec)
+
+
+
+mysql> EXECUTE delete_old USING @num;
+Query OK, 1 row affected (0.00 sec)
+
+mysql> select * from dates;
++------------+
+| date       |
++------------+
+| 2018-08-04 |
+| 2018-08-16 |
+| 2018-08-17 |
+| 2020-11-07 |
+| 2020-11-07 |
++------------+
+
+Тема 7.
+1.
+mysql> CREATE USER user1;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> CREATE USER user2;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> GRANT SELECT ON shop.* TO user1;
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> GRANT ALL ON shop.* TO user2;
+Query OK, 0 rows affected (0.01 sec)
+
+2.
+mysql> CREATE USER user_read IDENTIFIED WITH sha256_password BY 'password';
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> GRANT USAGE ON *.* TO user_read;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> CREATE TABLE accounts (id SERIAL, name VARCHAR(50), password varchar(50));
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> INSERT INTO accounts(name, password) VALUES ('user1', 'pass1'), ('user2', 'pass2');
+Query OK, 2 rows affected (0.01 sec)
+Records: 2  Duplicates: 0  Warnings: 0
+
+mysql> CREATE VIEW username AS (SELECT id, name FROM accounts);
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> SELECT * FROM username;
++----+-------+
+| id | name  |
++----+-------+
+|  1 | user1 |
+|  2 | user2 |
++----+-------+
+
+mysql> GRANT SELECT ON sample.username TO user_read;
+
+mysql> drop table username;
+ERROR 1142 (42000): DROP command denied to user 'user_read'@'localhost' for table 'username'
+mysql> select * from username;
++----+-------+
+| id | name  |
++----+-------+
+|  1 | user1 |
+|  2 | user2 |
++----+-------+
+
+Тема 8. 
+1.
+mysql> DELIMITER //
+mysql> use shop//
+mysql> CREATE FUNCTION hello()
+    -> RETURNS VARCHAR(255) DETERMINISTIC
+    -> BEGIN
+    -> SET @morning = 'Good morning';
+    -> SET @afternoon = 'Good afternoon';
+    -> SET @evening = 'Good evening';
+    -> SET @night = 'Good night';
+    -> IF DATE_FORMAT(NOW(), '%H:%i') BETWEEN '06:00' AND '12:00' THEN RETURN @morning;
+    -> ELSEIF DATE_FORMAT(NOW(), '%H:%i') BETWEEN '12:00' AND '18:00' THEN RETURN @afternoon;
+    -> ELSEIF DATE_FORMAT(NOW(), '%H:%i') BETWEEN '18:00' AND '00:00' THEN RETURN @evening;
+    -> ELSEIF DATE_FORMAT(NOW(), '%H:%i') BETWEEN '00:00' AND '06:00' THEN RETURN @night;
+    -> END IF;
+    -> END//
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> select hello()//
++----------------+
+| hello()        |
++----------------+
+| Good afternoon |
++----------------+
+
+2.
+mysql> CREATE TRIGGER products_check BEFORE UPDATE ON products 
+FOR EACH ROW 
+BEGIN 
+IF NEW.name IS NULL AND NEW.description IS NULL THEN 
+SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'update canceled'; 
+END IF; 
+END//
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> UPDATE products SET name = NULL WHERE id = 1//
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> UPDATE products SET description = NULL WHERE id = 1//
+ERROR 1644 (45000): update canceled
+
+mysql> CREATE TRIGGER products_add_check BEFORE INSERT ON products 
+FOR EACH ROW 
+BEGIN 
+IF NEW.name IS NULL AND NEW.description IS NULL THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'name and desc cant be both null'; 
+END IF; 
+END//
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> INSERT INTO products(name, description, price) VALUES ('some_name', 'some_desc', 12000)//
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO products(name, description, price) VALUES (NULL, NULL, 12000)//
+ERROR 1644 (45000): name and desc cant be both null
