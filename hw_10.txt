@@ -1,0 +1,52 @@
+1.
+mysql> CREATE INDEX users_first_name_last_name_idx ON users(first_name, last_name);
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> CREATE INDEX profiles_birthday_idx ON profiles(birthday);
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> CREATE INDEX media_size_idx ON media(size);
+Query OK, 0 rows affected (0.04 sec)
+
+2.
+mysql> SELECT DISTINCT c.community_id, 
+    -> COUNT(c.user_id) OVER w AS users,
+    -> MIN(p.birthday) OVER w AS youngest,
+    -> MAX(p.birthday) OVER w AS oldest,
+    -> COUNT(u.id) OVER() AS total_users,
+    -> ROUND(COUNT(c.user_id) OVER w / COUNT(u.id) OVER() * 100) AS '%'
+    -> FROM communities_users AS c 
+    -> JOIN users AS u ON c.user_id = u.id 
+    -> JOIN profiles AS p ON u.id = p.user_id
+    -> WINDOW w AS (PARTITION BY c.community_id);
++--------------+-------+------------+------------+-------------+------+
+| community_id | users | youngest   | oldest     | total_users | %    |
++--------------+-------+------------+------------+-------------+------+
+|            1 |     5 | 1943-04-02 | 2018-04-21 |         100 |    5 |
+|            2 |     7 | 1922-10-22 | 1979-11-15 |         100 |    7 |
+|            3 |     9 | 1922-08-30 | 1964-02-27 |         100 |    9 |
+|            4 |     1 | 1957-01-11 | 1957-01-11 |         100 |    1 |
+|            5 |     5 | 1923-11-24 | 1993-01-15 |         100 |    5 |
+|            6 |     9 | 1922-12-04 | 2010-05-18 |         100 |    9 |
+|            7 |     5 | 1930-03-28 | 2007-04-18 |         100 |    5 |
+|            8 |     5 | 1927-05-30 | 2001-07-13 |         100 |    5 |
+|            9 |     5 | 1922-01-21 | 2009-08-08 |         100 |    5 |
+|           10 |     2 | 1973-07-27 | 1978-12-30 |         100 |    2 |
+|           11 |     1 | 1986-06-17 | 1986-06-17 |         100 |    1 |
+|           12 |     5 | 1927-07-25 | 1949-11-10 |         100 |    5 |
+|           13 |     8 | 1929-07-05 | 2015-11-28 |         100 |    8 |
+|           14 |     3 | 2009-05-21 | 2019-03-14 |         100 |    3 |
+|           15 |     4 | 1975-02-08 | 1994-03-31 |         100 |    4 |
+|           16 |     5 | 1951-01-25 | 2020-06-29 |         100 |    5 |
+|           17 |     3 | 1925-12-27 | 2003-12-25 |         100 |    3 |
+|           18 |     6 | 1938-06-24 | 2016-03-30 |         100 |    6 |
+|           19 |     8 | 1944-07-28 | 2014-02-10 |         100 |    8 |
+|           20 |     4 | 1945-10-25 | 2012-10-03 |         100 |    4 |
++--------------+-------+------------+------------+-------------+------+
+
+Не придумал, как подсчитать среднее число пользователей в группах, по логике мне нужно взять среднее значение по столбцу users, используя функцию AVG() но если я передаю в качестве аргумента этой функции команду, с помощью которой я получил столбец users, то возникает ошибка. Команду и ошибку прилагаю:
+
+AVG(COUNT(c.user_id) OVER w) OVER()
+
+ERROR 3593 (HY000): You cannot use the window function 'count' in this context.
+
